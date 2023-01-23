@@ -98,7 +98,7 @@ func main() {
 	totalUsedSpace := directorySizes[len(directorySizes)-1]
 	spaceToBeFreed := totalUsedSpace - maxSize
 
-	// Sort ints and
+	// Sort ints and retrieve first acceptable size
 
 	sort.Ints(directorySizes)
 
