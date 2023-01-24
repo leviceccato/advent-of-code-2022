@@ -33,44 +33,19 @@ func main() {
 		}
 	}
 
-	// Setup head and tail states
+	drawPoints(commands, 2)
+	drawPoints(commands, 10)
+}
 
-	headPoint := point{}
-	tailPoint := point{}
-
-	tailHistory := set[point]{}
-	tailHistory.add(tailPoint)
-
-	// Move points based on commands
-
-	for _, command := range commands {
-		switch command {
-		case "U":
-			headPoint.y++
-		case "D":
-			headPoint.y--
-		case "L":
-			headPoint.x--
-		case "R":
-			headPoint.x++
-		}
-
-		tailPoint.moveToward(headPoint)
-		tailHistory.add(tailPoint)
-	}
-
-	// Output result
-
-	fmt.Printf("Unique tail positions 1: %d\n", len(tailHistory))
-
-	// Reset state
+func drawPoints(commands []string, count int) {
+	// Setup state
 
 	var points []*point
-	for len(points) < 10 {
+	for len(points) < count {
 		points = append(points, &point{})
 	}
 
-	tailHistory.clear()
+	tailHistory := set[point]{}
 
 	// Move points based on commands with more tail sections
 
@@ -106,7 +81,8 @@ func main() {
 	}
 
 	// Output result
-	fmt.Printf("Unique tail positions 2: %d\n", len(tailHistory))
+
+	fmt.Printf("Tail positions with %d points: %d\n", count, len(tailHistory))
 }
 
 type point struct {
@@ -130,12 +106,6 @@ func (p *point) moveToward(p2 point) {
 }
 
 type set[T comparable] map[T]struct{}
-
-func (s *set[T]) clear() {
-	for element := range *s {
-		delete(*s, element)
-	}
-}
 
 func (s *set[T]) add(element T) {
 	(*s)[element] = struct{}{}
