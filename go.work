@@ -1,1 +1,10 @@
 go 1.19
+
+use ./day-01-calorie-counting
+use ./day-02-rock-paper-scissors
+use ./day-03-rucksack-reorganization
+use ./day-04-camp-cleanup
+use ./day-05-supply-stacks
+use ./day-06-tuning-trouble
+use ./day-07-no-space-left-on-device
+use ./day-08-treetop-tree-house
