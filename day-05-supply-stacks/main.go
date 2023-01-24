@@ -9,13 +9,7 @@ import (
 )
 
 func main() {
-	// Read input file
-
-	input, err := os.ReadFile("input.txt")
-	if err != nil {
-		fmt.Println("input.txt not found")
-		return
-	}
+	input, _ := os.ReadFile("input.txt")
 
 	diagramAnProcedure := bytes.Split(input, []byte("\n\n"))
 	procedure := bytes.Split(diagramAnProcedure[1], []byte("\n"))
