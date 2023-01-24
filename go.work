@@ -8,3 +8,4 @@ use ./day-05-supply-stacks
 use ./day-06-tuning-trouble
 use ./day-07-no-space-left-on-device
 use ./day-08-treetop-tree-house
+use ./day-09-rope-bridge
