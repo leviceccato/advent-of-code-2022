@@ -24,9 +24,9 @@ func main() {
 
 		switch name {
 		case "noop":
-			instruction.duration = 1
+			instruction.cycles = 1
 		case "addx":
-			instruction.duration = 2
+			instruction.cycles = 2
 
 			value, _ := strconv.Atoi(string(instructionRaw[1]))
 			instruction.value = value
@@ -40,31 +40,20 @@ func main() {
 	lastReadCycle := 220
 	readCycles := newSet(20, 60, 100, 140, 180, lastReadCycle)
 
-	cycle := 1
 	x := 1
-	instructionDuration := instructions[0].duration
-	var instructionIndex int
+	var cycle int
 	var signalStrengths []int
 
-	for cycle <= lastReadCycle && instructionIndex < len(instructions)-1 {
-		cycle++
+	for _, instruction := range instructions {
+		for instructionCycle := 1; instructionCycle <= instruction.cycles; instructionCycle++ {
+			cycle++
 
-		if instructionDuration < 1 {
-			instructionIndex++
-			instructionDuration = instructions[instructionIndex].duration
+			if readCycles.has(cycle) {
+				signalStrengths = append(signalStrengths, cycle*x)
+			}
 		}
 
-		if instructionDuration < 2 {
-			x += instructions[instructionIndex].value
-		}
-
-		instructionDuration--
-
-		if readCycles.has(cycle) {
-			fmt.Println("cycle", cycle, "x", x, "strength", cycle*x)
-			signalStrength := cycle * x
-			signalStrengths = append(signalStrengths, signalStrength)
-		}
+		x += instruction.value
 	}
 
 	// Sum signal strengths
@@ -80,7 +69,7 @@ func main() {
 }
 
 type cpuInstruction struct {
-	duration, value int
+	cycles, value int
 }
 
 type set[T comparable] map[T]struct{}
