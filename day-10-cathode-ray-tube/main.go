@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 )
@@ -66,6 +67,50 @@ func main() {
 	// Output result
 
 	fmt.Printf("Sum of signal strengths: %d\n", signalStrengthSum)
+
+	// Reset state
+
+	spritePadding := 1
+	rowLength := 40
+	litPixel := []byte("#")
+	darkPixel := []byte(".")
+
+	var pixels []byte
+
+	cycle = 0
+	x = 1
+
+	for _, instruction := range instructions {
+		for instructionCycle := 1; instructionCycle <= instruction.cycles; instructionCycle++ {
+			cycle++
+
+			pixelIndex := normaliseRange(cycle, 1, rowLength+1) - 1
+
+			pixel := darkPixel
+			difference := int(math.Abs(float64(x) - float64(pixelIndex)))
+			if difference-spritePadding <= 0 {
+				pixel = litPixel
+			}
+
+			pixels = append(pixels, pixel...)
+		}
+
+		x += instruction.value
+	}
+
+	// Create screen from pixels
+
+	var rows [][]byte
+	for index := 0; index < len(pixels); index += rowLength {
+		rows = append(rows, pixels[index:index+rowLength])
+	}
+
+	// // Output result
+
+	fmt.Printf("CRT Screen:\n")
+	for _, row := range rows {
+		fmt.Printf("%s\n", row)
+	}
 }
 
 type cpuInstruction struct {
@@ -85,4 +130,11 @@ func newSet[T comparable](values ...T) set[T] {
 func (s set[T]) has(element T) bool {
 	_, ok := s[element]
 	return ok
+}
+
+func normaliseRange(value, start, end int) int {
+	width := float64(end - start)
+	offset := float64(value - start)
+
+	return int(offset - (math.Floor(offset/width) * width) + float64(start))
 }
