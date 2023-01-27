@@ -102,9 +102,7 @@ func (g Grid) values() []*Node {
 	values := []*Node{}
 
 	for _, row := range g {
-		for _, node := range row {
-			values = append(values, node)
-		}
+		values = append(values, row...)
 	}
 
 	return values
@@ -229,11 +227,6 @@ func (s *Set[T]) add(element T) {
 
 func (s *Set[T]) remove(element T) {
 	delete(*s, element)
-}
-
-func (s Set[T]) has(element T) bool {
-	_, ok := s[element]
-	return ok
 }
 
 func charToElevation(char rune) int {
