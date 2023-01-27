@@ -40,78 +40,47 @@ func main() {
 		}
 	}
 
-	openNodes := newSet(startNode)
-	closedNodes := newSet[*Node]()
-
-	for {
-		openNodesSorted := openNodes.values()
-		sort.Slice(openNodesSorted, func(a, b int) bool {
-			return openNodesSorted[a].score(*endNode) < openNodesSorted[b].score(*endNode)
-		})
-
-		selectedNode := openNodesSorted[0]
-		openNodes.remove(selectedNode)
-		closedNodes.add(selectedNode)
-
-		if selectedNode == endNode {
-			break
-		}
-
-		neighbours := selectedNode.neighbours(grid)
-		for _, neighbour := range neighbours {
-			// Ensure neighbour exists (for nodes on the edges)
-
-			if neighbour == nil {
-				continue
-			}
-
-			if closedNodes.has(neighbour) || !isTraversable(selectedNode.elevation, neighbour.elevation) {
-				continue
-			}
-
-			isNeighbourOpen := openNodes.has(neighbour)
-
-			if !isNeighbourOpen || neighbour.pathLength() < selectedNode.pathLength()+1 {
-				neighbour.distanceFromStart = neighbour.distanceTo(*startNode)
-				neighbour.parent = selectedNode
-				if !isNeighbourOpen {
-					openNodes.add(neighbour)
-				}
-			}
-		}
-	}
+	path := grid.aStar(startNode, endNode)
 
 	// Calculate number of steps taken
 
-	var test [][]int
-	for i := 1; i <= len(grid); i++ {
-		var test2 []int
-		for j := 1; j <= len(grid[0]); j++ {
-			test2 = append(test2, 0)
-		}
-		test = append(test, test2)
-	}
-
-	var stepCount int
-	selectedNode := endNode
-	for selectedNode.parent != nil {
-		test[selectedNode.y][selectedNode.x] = stepCount + 1
-		stepCount++
-		selectedNode = selectedNode.parent
-	}
-
-	var output []byte
-	for _, a := range test {
-		for _, b := range a {
-			output = append(output, []byte(fmt.Sprintf("%*d ", 3, b))...)
-		}
-		output = append(output, []byte("\n")...)
-	}
+	stepCount := len(path) - 1
 
 	// Output result
 
 	fmt.Printf("Least number of steps: %d\n", stepCount)
-	os.WriteFile("output.txt", output, 0644)
+
+	// Get all lowest elevation nodes
+
+	nodes := grid.values()
+	lowestNodes := []*Node{}
+	for _, node := range nodes {
+		if node.elevation == 0 {
+			lowestNodes = append(lowestNodes, node)
+		}
+	}
+
+	// Run aStar on all lowest nodes and get the shortest path
+	// Warning: this is very expensive
+
+	var shortestStepCount int
+
+	var paths [][]*Node
+	for _, node := range lowestNodes {
+		path := grid.aStar(node, endNode)
+		if len(path) > 0 {
+			paths = append(paths, path)
+		}
+	}
+	sort.Slice(paths, func(a, b int) bool {
+		return len(paths[a]) < len(paths[b])
+	})
+
+	shortestStepCount = len(paths[0]) - 1
+
+	// Output result
+
+	fmt.Printf("Least number of steps for all 0 elevations: %d\n", shortestStepCount)
 }
 
 type Grid [][]*Node
@@ -129,32 +98,108 @@ func (g Grid) getNode(x, y int) *Node {
 	return row[x]
 }
 
-type Node struct {
-	parent    *Node
-	elevation int
-	x, y      int
+func (g Grid) values() []*Node {
+	values := []*Node{}
 
-	distanceFromStart int
-}
-
-func (n Node) distanceTo(n2 Node) int {
-	return distance(n.x, n.y, n2.x, n2.y)
-}
-
-func (n *Node) score(n2 Node) int {
-	return int(n.distanceFromStart) + int(n.distanceTo(n2))
-}
-
-func (n Node) pathLength() int {
-	var length int
-	current := &n
-
-	for current.parent != nil {
-		length++
-		current = current.parent
+	for _, row := range g {
+		for _, node := range row {
+			values = append(values, node)
+		}
 	}
 
-	return length
+	return values
+}
+
+func (g Grid) getPath(parentMap map[*Node]*Node, node *Node) []*Node {
+	path := []*Node{node}
+	_, ok := parentMap[node]
+
+	for ok {
+		node, ok = parentMap[node]
+		if ok {
+			path = append([]*Node{node}, path...)
+		}
+	}
+
+	return path
+}
+
+func (g Grid) aStar(startNode, endNode *Node) []*Node {
+	parentMap := map[*Node]*Node{}
+	scoreMap := map[*Node]float64{}
+	startDistanceMap := map[*Node]float64{}
+	openNodes := Set[*Node]{}
+
+	getMapValue := func(valueMap map[*Node]float64, node *Node) float64 {
+		value, ok := valueMap[node]
+		if !ok {
+			return math.Inf(1)
+		}
+
+		return value
+	}
+
+	heuristic := func(node *Node) float64 {
+		startDistance := getMapValue(startDistanceMap, node)
+		endDistance := float64(distance(node.x, node.y, endNode.x, endNode.y))
+
+		return startDistance + endDistance
+	}
+
+	openNodes.add(startNode)
+	startDistanceMap[startNode] = 0
+	scoreMap[startNode] = heuristic(startNode)
+
+	for len(openNodes) > 0 {
+		// Get lowest scoring open node
+
+		openNodesSlice := openNodes.values()
+		sort.Slice(openNodesSlice, func(a, b int) bool {
+			return getMapValue(scoreMap, openNodesSlice[a]) < getMapValue(scoreMap, openNodesSlice[b])
+		})
+		selectedNode := openNodesSlice[0]
+
+		// If node is end return path from start
+
+		if selectedNode == endNode {
+			return g.getPath(parentMap, selectedNode)
+		}
+
+		openNodes.remove(selectedNode)
+
+		neighbours := selectedNode.neighbours(g)
+		for _, neighbour := range neighbours {
+			// Ensure neighbour exists (for nodes on the edges)
+
+			if neighbour == nil {
+				continue
+			}
+
+			// Ensure we can traverse to this neighbour
+
+			if !isTraversable(selectedNode.elevation, neighbour.elevation) {
+				continue
+			}
+
+			tentativeStartDistance := getMapValue(startDistanceMap, selectedNode) + 1
+
+			if tentativeStartDistance < getMapValue(startDistanceMap, neighbour) {
+				parentMap[neighbour] = selectedNode
+				startDistanceMap[neighbour] = tentativeStartDistance
+				scoreMap[neighbour] = tentativeStartDistance + heuristic(neighbour)
+				openNodes.add(neighbour)
+			}
+		}
+	}
+
+	// Failed to find path, return empty slice
+
+	return []*Node{}
+}
+
+type Node struct {
+	x, y      int
+	elevation int
 }
 
 func (n *Node) neighbours(grid Grid) []*Node {
@@ -167,16 +212,6 @@ func (n *Node) neighbours(grid Grid) []*Node {
 }
 
 type Set[T comparable] map[T]struct{}
-
-func newSet[T comparable](values ...T) Set[T] {
-	s := Set[T]{}
-
-	for _, v := range values {
-		s[v] = struct{}{}
-	}
-
-	return s
-}
 
 func (s Set[T]) values() []T {
 	var elements []T
