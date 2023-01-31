@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 )
 
@@ -14,10 +15,127 @@ func main() {
 
 	pairs := parsePairs(input)
 
-	fmt.Println(pairs)
+	// Sum ordered pairs
+
+	var orderedPairSum int
+	for pairIndex, pair := range pairs {
+		order := packetsOrder(pair[0], pair[1])
+		if order == orderOrdered {
+			orderedPairSum += pairIndex + 1
+		}
+	}
+
+	// Output result
+
+	fmt.Printf("Sum of correctly ordererd pair numbers: %d\n", orderedPairSum)
+
+	// Create divider packets
+
+	dividers := parsePairs([]byte("[[2]]\n[[6]]"))
+
+	// Transform pairs & divider pairs to slice of packets
+
+	var packets []*Packet
+	for _, pair := range append(pairs, dividers...) {
+		for _, packet := range pair {
+			packets = append(packets, packet)
+		}
+	}
+
+	// Sort packets
+
+	sort.Slice(packets, func(a, b int) bool {
+		return packetsOrder(packets[a], packets[b]) == orderOrdered
+	})
+
+	// Calculate decode key from indexes of divider packets
+
+	decoderKey := 1
+	for packetIndex, rootPacket := range packets {
+		packetSlice := rootPacket.values()
+		if len(packetSlice) != 1 {
+			continue
+		}
+
+		packet, isPacket := packetSlice[0].(*Packet)
+		if !isPacket {
+			continue
+		}
+
+		values := packet.values()
+		if len(values) != 1 {
+			continue
+		}
+
+		value, isValue := values[0].(Value)
+		if !isValue {
+			continue
+		}
+
+		switch value {
+		case 2, 6:
+			decoderKey *= (packetIndex + 1)
+		}
+	}
+
+	// Output result
+
+	fmt.Printf("Decoder key: %d\n", decoderKey)
 }
 
-type Pair [2]Packet
+type Order int
+
+const (
+	orderNotOrdered Order = iota - 1
+	orderSame
+	orderOrdered
+)
+
+func packetsOrder(leftValues, rightValues Values) Order {
+	leftSlice := leftValues.values()
+	rightSlice := rightValues.values()
+
+	for len(leftSlice) > 0 && len(rightSlice) > 0 {
+		// Pop first values
+
+		left := leftSlice[0]
+		leftSlice = leftSlice[1:]
+		right := rightSlice[0]
+		rightSlice = rightSlice[1:]
+
+		// Return if unequal values otherwise continue loop
+
+		leftValue, isLeftValue := left.(Value)
+		rightValue, isRightValue := right.(Value)
+
+		if isLeftValue && isRightValue {
+			if leftValue < rightValue {
+				return orderOrdered
+			}
+			if leftValue > rightValue {
+				return orderNotOrdered
+			}
+			continue
+		}
+
+		// If at least 1 list convert
+
+		order := packetsOrder(left, right)
+		if order != orderSame {
+			return order
+		}
+	}
+
+	if len(leftSlice) < len(rightSlice) {
+		return orderOrdered
+	}
+	if len(leftSlice) > len(rightSlice) {
+		return orderNotOrdered
+	}
+	return orderSame
+}
+
+type Pair [2]*Packet
 
 type Values interface {
 	values() []Values
@@ -56,6 +174,8 @@ func parsePairs(inputBytes []byte) []Pair {
 			var value []rune
 			var packet *Packet
 
+			// Add value as sum of runes and reset
+
 			addValueToPacket := func() {
 				if len(value) < 1 {
 					return
@@ -69,6 +189,9 @@ func parsePairs(inputBytes []byte) []Pair {
 			for _, char := range string(packetBytes) {
 				switch char {
 				case '[':
+					// Add nested packet or root packet if
+					// none exists
+
 					if packet == nil {
 						packet = &Packet{}
 						continue
@@ -79,6 +202,8 @@ func parsePairs(inputBytes []byte) []Pair {
 					packet.add(newPacket)
 					packet = newPacket
 				case ']':
+					// Finish packet and move to parent
+
 					addValueToPacket()
 					parent := packet.parent
 					if parent == nil {
@@ -88,11 +213,13 @@ func parsePairs(inputBytes []byte) []Pair {
 				case ',':
 					addValueToPacket()
 				default:
+					// Assume number char
+
 					value = append(value, char)
 				}
 			}
 
-			pair[packetBytesIndex] = *packet
+			pair[packetBytesIndex] = packet
 		}
 
 		pairs = append(pairs, pair)
