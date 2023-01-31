@@ -19,8 +19,7 @@ func main() {
 
 	var orderedPairSum int
 	for pairIndex, pair := range pairs {
-		order := packetsOrder(pair[0], pair[1])
-		if order == orderOrdered {
+		if packetsOrder(pair[0], pair[1]) == orderOrdered {
 			orderedPairSum += pairIndex + 1
 		}
 	}
