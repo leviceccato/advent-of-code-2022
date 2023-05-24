@@ -54,7 +54,6 @@ func main() {
 
 		for sandState != sandStateStopped {
 			point, sandState = caveMap2.moveSand(point)
-			// fmt.Println(point, sandState)
 		}
 
 		restingSandCount++
@@ -67,39 +66,6 @@ func main() {
 	// Output result
 
 	fmt.Printf("Resting sand count with floor: %d\n", restingSandCount)
-
-	// Debug points to materials
-
-	// var grid [][][]byte
-
-	// for y := 0; y <= caveMap2.height(); y++ {
-	// 	row := [][]byte{}
-
-	// 	for x := 0; x <= caveMap2.width(); x++ {
-	// 		row = append(row, []byte("."))
-	// 	}
-
-	// 	grid = append(grid, row)
-	// }
-
-	// for point, material := range caveMap2.elements {
-	// 	x := point.x - int(caveMap2.minX)
-	// 	y := point.y - int(caveMap2.minY)
-
-	// 	switch material {
-	// 	case materialSand:
-	// 		grid[y][x] = []byte("o")
-	// 	case materialRock:
-	// 		grid[y][x] = []byte("#")
-	// 	}
-	// }
-
-	// for _, row := range grid {
-	// 	for _, materialBytes := range row {
-	// 		fmt.Print(string(materialBytes))
-	// 	}
-	// 	fmt.Print("\n")
-	// }
 }
 
 type SandState int
