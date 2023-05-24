@@ -13,3 +13,4 @@ use ./day-10-cathode-ray-tube
 use ./day-11-monkey-in-the-middle
 use ./day-12-hill-climbing-algorithm
 use ./day-13-distress-signal
+use ./day-14-regolith-reservoir
