@@ -24,7 +24,7 @@ func main() {
 	for x := tunnels.minX; x <= tunnels.maxX; x++ {
 		for _, d := range tunnels.detections {
 
-			// On a beacon or sensor, occupied
+			// On a beacon, occupied
 			if x == d.beaconX && y == d.beaconY {
 				continue
 			}
@@ -108,6 +108,8 @@ func parseTunnels(input []byte) Tunnels {
 		minX:       minX,
 	}
 }
+
+// Simplify max and min calculations
 
 func min[T constraints.Ordered](a, b T) T {
 	if a < b {
