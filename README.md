@@ -10,7 +10,7 @@ My attempts at the Advent of Code challenge for 2022 using Go.
 
 Each project is setup as an individual Go module. To run them:
 
-```
-cd [DIRECTORY_NAME]
+```bash
+cd 07-no-space-left-on-device/ # example
 go run .
 ```
