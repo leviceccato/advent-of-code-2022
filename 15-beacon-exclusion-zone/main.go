@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -58,11 +57,11 @@ func (s *Set[T]) add(element T) {
 	(*s)[element] = struct{}{}
 }
 
-func manhattanDistance(x1, y1, x2, y2 int) int {
-	distanceX := math.Abs(float64(x1 - x2))
-	distanceY := math.Abs(float64(y1 - y2))
+func manhattanDistance[T Number](x1, y1, x2, y2 T) T {
+	distanceX := abs(x1 - x2)
+	distanceY := abs(y1 - y2)
 
-	return int(distanceX + distanceY)
+	return distanceX + distanceY
 }
 
 func parseTunnels(input []byte) Tunnels {
@@ -109,16 +108,27 @@ func parseTunnels(input []byte) Tunnels {
 	}
 }
 
-// Simplify max and min calculations
+// Simplify calculations
 
-func min[T constraints.Ordered](a, b T) T {
+type Number interface {
+	constraints.Integer | constraints.Float
+}
+
+func abs[T Number](a T) T {
+	if a < T(0) {
+		return -a
+	}
+	return a
+}
+
+func min[T Number](a, b T) T {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func max[T constraints.Ordered](a, b T) T {
+func max[T Number](a, b T) T {
 	if a > b {
 		return a
 	}
