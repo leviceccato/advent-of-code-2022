@@ -24,23 +24,66 @@ func main() {
 		for _, d := range tunnels.detections {
 
 			// On a beacon, occupied
-			if x == d.beaconX && y == d.beaconY {
+			if x == d.beacon[0] && y == d.beacon[1] {
 				continue
 			}
+
+			position := Position{x, y}
 
 			// Outside sensor distance, a beacon can be here
-			if d.distance < manhattanDistance(x, y, d.sensorX, d.sensorY) {
+			if d.distance < d.sensor.manhattanDistance(position) {
 				continue
 			}
 
-			impossiblePositions.add(Position{x, y})
+			impossiblePositions.add(position)
 		}
 	}
 
 	fmt.Printf("Positions that cannot contain a beacon: %d\n", len(impossiblePositions))
-}
 
-type Position [2]int
+	possiblePositions := Set[Position]{}
+	maxXandY := 4_000_000
+	minXandY := 0
+
+	for _, d := range tunnels.detections {
+		perimeter := d.sensor.manhattanPerimeter(d.distance + 1)
+
+	perimeterLoop:
+		for position := range perimeter {
+
+			// Outside of bounds
+			if (position[0] > maxXandY || position[1] > maxXandY) ||
+				(position[0] < minXandY || position[1] < minXandY) {
+				continue
+			}
+
+			for _, comparedDetections := range tunnels.detections {
+				// Don't compare to current detection
+				if d.sensor == comparedDetections.sensor {
+					continue
+				}
+
+				// Position is within another sensor's area, ignore
+				distance := position.manhattanDistance(comparedDetections.sensor)
+				if distance < (comparedDetections.distance + 1) {
+					continue perimeterLoop
+				}
+			}
+
+			possiblePositions.add(position)
+		}
+	}
+
+	var tuningFrequency int
+	for position := range possiblePositions {
+		tuningFrequency = position[0]*4_000_000 + position[1]
+		// Immediately break because we assume there is only 1
+		// possible position found
+		break
+	}
+
+	fmt.Printf("Tuning frequency: %d\n", tuningFrequency)
+}
 
 type Tunnels struct {
 	detections []Detection
@@ -48,7 +91,8 @@ type Tunnels struct {
 }
 
 type Detection struct {
-	distance, sensorX, sensorY, beaconX, beaconY int
+	distance       int
+	sensor, beacon Position
 }
 
 type Set[T comparable] map[T]struct{}
@@ -57,11 +101,27 @@ func (s *Set[T]) add(element T) {
 	(*s)[element] = struct{}{}
 }
 
-func manhattanDistance[T Number](x1, y1, x2, y2 T) T {
-	distanceX := abs(x1 - x2)
-	distanceY := abs(y1 - y2)
+type Position [2]int
+
+func (p Position) manhattanDistance(p2 Position) int {
+	distanceX := abs(p[0] - p2[0])
+	distanceY := abs(p[1] - p2[1])
 
 	return distanceX + distanceY
+}
+
+func (p Position) manhattanPerimeter(distance int) Set[Position] {
+	perimeter := Set[Position]{}
+
+	// Add top and bottom points for every column
+	for x := p[0] - distance; x <= p[0]+distance; x++ {
+		yOffset := abs(p[0]-x) - distance
+
+		perimeter.add(Position{x, p[1] + yOffset})
+		perimeter.add(Position{x, p[1] - yOffset})
+	}
+
+	return perimeter
 }
 
 func parseTunnels(input []byte) Tunnels {
@@ -83,10 +143,13 @@ func parseTunnels(input []byte) Tunnels {
 		beaconX, _ := strconv.Atoi(string(numbers[2]))
 		beaconY, _ := strconv.Atoi(string(numbers[3]))
 
-		distance := manhattanDistance(sensorX, sensorY, beaconX, beaconY)
+		sensor := Position{sensorX, sensorY}
+		beacon := Position{beaconX, beaconY}
 
-		// Set max and min x values so we know how many positions
-		// to check
+		distance := sensor.manhattanDistance(beacon)
+
+		// Set max and min x values so we know
+		// how many positions to check
 		maxX = max(maxX, sensorX+distance)
 		minX = min(minX, sensorX-distance)
 		maxX = max(maxX, beaconX)
@@ -94,10 +157,8 @@ func parseTunnels(input []byte) Tunnels {
 
 		detections = append(detections, Detection{
 			distance: distance,
-			sensorX:  sensorX,
-			sensorY:  sensorY,
-			beaconX:  beaconX,
-			beaconY:  beaconY,
+			sensor:   sensor,
+			beacon:   beacon,
 		})
 	}
 
